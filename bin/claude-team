@@ -8,6 +8,8 @@ PROFILES_DIR="${CLAUDE_TEAM_PROFILES:-$HOME/.claude/team}"
 CLAUDE_MD="$HOME/.claude/CLAUDE.md"
 MARKER_START="<!-- CLAUDE-TEAM:START -->"
 MARKER_END="<!-- CLAUDE-TEAM:END -->"
+COORD_START="<!-- CLAUDE-COORDINATOR:START -->"
+COORD_END="<!-- CLAUDE-COORDINATOR:END -->"
 
 # ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -155,13 +157,87 @@ cmd_status() {
   local active
   active=$(get_active)
 
+  local coord_on="no"
+  if grep -qF "$COORD_START" "$CLAUDE_MD" 2>/dev/null; then
+    coord_on="yes"
+  fi
+
   echo ""
   if [[ -n "$active" ]]; then
     echo "$(bold "Active team member:") $(green "$active")"
   else
-    echo "$(dim "No team member is currently active.")"
+    echo "$(bold "Active team member:") $(dim "none")"
+  fi
+  if [[ "$coord_on" == "yes" ]]; then
+    echo "$(bold "Coordinator:") $(green "on")"
+  else
+    echo "$(bold "Coordinator:") $(dim "off")"
   fi
   echo ""
+}
+
+cmd_coordinator() {
+  local action="${1:-}"
+  [[ -n "$action" ]] || die "Usage: claude-team coordinator <on|off>"
+
+  case "$action" in
+    on)
+      local coord_file="$PROFILES_DIR/coordinator.md"
+      [[ -f "$coord_file" ]] || die "Coordinator profile not found: $coord_file
+Run the installer first: bash install.sh"
+
+      touch "$CLAUDE_MD"
+      local content
+      content=$(cat "$coord_file")
+      local block
+      block=$(printf '%s\n%s\n%s' "$COORD_START" "$content" "$COORD_END")
+
+      if grep -qF "$COORD_START" "$CLAUDE_MD"; then
+        # Replace existing coordinator block
+        local tmp
+        tmp=$(mktemp)
+        awk -v block="$block" \
+          "/$COORD_START/{found=1; print block; next} found && /$COORD_END/{found=0; next} !found{print}" \
+          "$CLAUDE_MD" > "$tmp"
+        mv "$tmp" "$CLAUDE_MD"
+        echo ""
+        echo "$(green "✓") Coordinator already on — profile refreshed."
+      else
+        printf '\n%s\n' "$block" >> "$CLAUDE_MD"
+        echo ""
+        echo "$(green "✓") Coordinator $(bold "on")."
+        echo "$(dim "Claude will now proactively suggest team members and mode switches.")"
+      fi
+      echo "$(dim "Start a new Claude Code session to apply.")"
+      echo ""
+      ;;
+
+    off)
+      if ! grep -qF "$COORD_START" "$CLAUDE_MD" 2>/dev/null; then
+        echo ""
+        echo "$(dim "Coordinator is already off.")"
+        echo ""
+        return
+      fi
+
+      local tmp
+      tmp=$(mktemp)
+      awk "/$COORD_START/{found=1} found && /$COORD_END/{found=0; next} !found{print}" \
+        "$CLAUDE_MD" > "$tmp"
+      sed -e 's/[[:space:]]*$//' "$tmp" | \
+        awk 'NF{found=1} found' > "$CLAUDE_MD" || true
+      rm -f "$tmp"
+
+      echo ""
+      echo "$(green "✓") Coordinator $(bold "off")."
+      echo "$(dim "Start a new Claude Code session to apply.")"
+      echo ""
+      ;;
+
+    *)
+      die "Unknown coordinator action: $action. Use 'on' or 'off'."
+      ;;
+  esac
 }
 
 cmd_help() {
@@ -169,17 +245,21 @@ cmd_help() {
   echo "$(bold "claude-team") — Manage Claude Code team member personas"
   echo ""
   echo "$(bold "Usage:")"
-  echo "  claude-team list              List all available team members"
-  echo "  claude-team show <name>       Display a team member's full profile"
-  echo "  claude-team use <name>        Activate a team member in Claude Code"
-  echo "  claude-team reset             Deactivate the current team member"
-  echo "  claude-team status            Show which team member is active"
+  echo "  claude-team list                    List all available team members"
+  echo "  claude-team show <name>             Display a team member's full profile"
+  echo "  claude-team use <name>              Activate a team member in Claude Code"
+  echo "  claude-team reset                   Deactivate the current team member"
+  echo "  claude-team status                  Show active team member and coordinator state"
+  echo "  claude-team coordinator on|off      Enable/disable proactive team check-ins"
   echo ""
   echo "$(bold "Examples:")"
-  echo "  claude-team use robin         Activate Robin (Testing)"
-  echo "  claude-team use akira         Activate Akira (Backend)"
-  echo "  claude-team use sasha         Activate Sasha (Frontend)"
-  echo "  claude-team reset             Return to default Claude behavior"
+  echo "  claude-team use robin               Activate Robin (Testing)"
+  echo "  claude-team use akira               Activate Akira (Backend)"
+  echo "  claude-team use sasha               Activate Sasha (Frontend)"
+  echo "  claude-team use toni                Activate Toni (Product Marketing)"
+  echo "  claude-team use river               Activate River (Product)"
+  echo "  claude-team coordinator on          Enable proactive team suggestions"
+  echo "  claude-team reset                   Return to default Claude behavior"
   echo ""
   echo "$(dim "Profiles are stored in: $PROFILES_DIR")"
   echo "$(dim "Active profile is injected into: $CLAUDE_MD")"
@@ -189,11 +269,12 @@ cmd_help() {
 # ─── Dispatch ────────────────────────────────────────────────────────────────
 
 case "${1:-help}" in
-  list)   cmd_list ;;
-  show)   cmd_show "${2:-}" ;;
-  use)    cmd_use "${2:-}" ;;
-  reset)  cmd_reset ;;
-  status) cmd_status ;;
+  list)        cmd_list ;;
+  show)        cmd_show "${2:-}" ;;
+  use)         cmd_use "${2:-}" ;;
+  reset)       cmd_reset ;;
+  status)      cmd_status ;;
+  coordinator) cmd_coordinator "${2:-}" ;;
   help|--help|-h) cmd_help ;;
   *) die "Unknown command: $1. Run 'claude-team help' for usage." ;;
 esac

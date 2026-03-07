@@ -6,6 +6,7 @@
 #   1. Copies team member profiles to ~/.claude/team/
 #   2. Installs the claude-team CLI to ~/.local/bin/
 #   3. Checks that ~/.local/bin is on your PATH
+#   4. Optionally enables the coordinator (proactive team check-ins)
 
 set -euo pipefail
 
@@ -58,15 +59,53 @@ else
   echo "    source ~/.zshrc   $(dim "# or ~/.bashrc")"
 fi
 
+# 4. Coordinator setup
+echo ""
+echo "$(bold "Coordinator") — proactive team check-ins"
+echo ""
+echo "  When enabled, Claude will ask which team member to use at the start of"
+echo "  each task, and suggest switching when the conversation changes domain."
+echo ""
+printf "  Enable the coordinator now? [Y/n] "
+read -r coord_answer
+coord_answer="${coord_answer:-Y}"
+
+CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+COORD_START="<!-- CLAUDE-COORDINATOR:START -->"
+COORD_END="<!-- CLAUDE-COORDINATOR:END -->"
+COORD_FILE="$PROFILES_DST/coordinator.md"
+
+if [[ "${coord_answer^^}" == "Y" ]]; then
+  touch "$CLAUDE_MD"
+  content=$(cat "$COORD_FILE")
+  block=$(printf '%s\n%s\n%s' "$COORD_START" "$content" "$COORD_END")
+
+  if grep -qF "$COORD_START" "$CLAUDE_MD"; then
+    tmp=$(mktemp)
+    awk -v block="$block" \
+      "/$COORD_START/{found=1; print block; next} found && /$COORD_END/{found=0; next} !found{print}" \
+      "$CLAUDE_MD" > "$tmp"
+    mv "$tmp" "$CLAUDE_MD"
+  else
+    printf '\n%s\n' "$block" >> "$CLAUDE_MD"
+  fi
+  echo "  $(green "✓") Coordinator enabled."
+else
+  echo "  $(dim "Skipped. Enable later with: claude-team coordinator on")"
+fi
+
 echo ""
 echo "$(bold "Done!") Your Claude dev team is ready."
 echo ""
 echo "Quick start:"
-echo "  claude-team list          $(dim "# see your team")"
-echo "  claude-team use robin     $(dim "# activate Robin (Testing)")"
-echo "  claude-team use akira     $(dim "# activate Akira (Backend)")"
-echo "  claude-team use sasha     $(dim "# activate Sasha (Frontend)")"
-echo "  claude-team reset         $(dim "# return to default Claude")"
+echo "  claude-team list                   $(dim "# see your team")"
+echo "  claude-team use robin              $(dim "# activate Robin (Testing)")"
+echo "  claude-team use akira              $(dim "# activate Akira (Backend)")"
+echo "  claude-team use sasha              $(dim "# activate Sasha (Frontend)")"
+echo "  claude-team use toni               $(dim "# activate Toni (Product Marketing)")"
+echo "  claude-team use river              $(dim "# activate River (Product)")"
+echo "  claude-team coordinator on|off     $(dim "# toggle proactive check-ins")"
+echo "  claude-team reset                  $(dim "# return to default Claude")"
 echo ""
 echo "$(dim "Start a new Claude Code session after activating a team member.")"
 echo ""

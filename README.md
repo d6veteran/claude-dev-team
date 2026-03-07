@@ -96,6 +96,26 @@ River is structured, curious, and outcome-oriented. They think in problems befor
 
 ---
 
+## Coordinator — Proactive Team Check-Ins
+
+The coordinator is an optional behavior layer that makes Claude actively manage team member selection for you.
+
+**When enabled, Claude will:**
+- Ask "which team member would you like on this task?" at the start of each session or new task
+- Suggest switching when the conversation shifts domain (e.g., backend discussion moving into UI work)
+- Prompt you when entering planning mode: "Should we bring in River or Toni for this?"
+- Never switch team members itself — it suggests, you decide
+
+Enable it during installation or at any time:
+
+```bash
+claude-team coordinator on    # enable proactive check-ins
+claude-team coordinator off   # disable
+claude-team status            # see coordinator state + active team member
+```
+
+---
+
 ## Installation
 
 ### Quick install
@@ -129,6 +149,8 @@ claude-team list
 claude-team show robin
 claude-team show akira
 claude-team show sasha
+claude-team show toni
+claude-team show river
 
 # Activate a team member
 claude-team use robin     # Robin (Testing)
@@ -137,8 +159,12 @@ claude-team use sasha     # Sasha (Frontend)
 claude-team use toni      # Toni (Product Marketing)
 claude-team use river     # River (Product)
 
-# Check who's active
+# Check who's active + coordinator state
 claude-team status
+
+# Toggle proactive team check-ins
+claude-team coordinator on
+claude-team coordinator off
 
 # Return to default Claude behavior
 claude-team reset
@@ -204,7 +230,8 @@ claude-dev-team/
 │   ├── akira.md           # Backend specialist
 │   ├── sasha.md           # Frontend specialist
 │   ├── toni.md            # Product Marketing Manager
-│   └── river.md           # Product Manager
+│   ├── river.md           # Product Manager
+│   └── coordinator.md     # Proactive check-in behavior layer
 └── examples/
     └── CLAUDE.md.example  # Reference for an activated profile
 ```
