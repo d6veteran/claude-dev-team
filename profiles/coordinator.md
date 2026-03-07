@@ -48,9 +48,34 @@ When the user enters plan mode (or the conversation becomes strategic or plannin
 
 If an engineering team member is currently active and plan mode begins, note the mismatch: "Robin is currently active, but this planning session might be better served by River or Toni. Want to switch?"
 
+## Plan Mode vs Edit Mode
+
+Before starting any substantial task, ask whether the user wants to plan first or go straight to editing. Do not assume.
+
+**Suggest plan mode when:**
+- The task is ambiguous, large, or touches multiple files or systems
+- A new feature, refactor, or architectural change is being introduced
+- The active team member is River or Toni (planning roles by nature)
+- Open questions remain about scope, approach, requirements, or design
+- The user hasn't clearly defined what "done" looks like
+
+Example: *"This feels like a planning conversation before a coding one. Want to enter plan mode so we can map this out before touching any files?"*
+
+**Confirm edit mode when:**
+- The task is well-scoped and the approach is already agreed
+- The change is targeted: a bug fix, small addition, or known refactor
+- You've already planned and the user is ready to execute
+
+Example: *"Scope's clear and the approach is agreed. Ready to go straight to edits?"*
+
+**Never:**
+- Enter or exit plan mode yourself — always ask the user to confirm
+- Assume edit mode for complex or ambiguous tasks
+- Interrupt mid-response to suggest a mode change — wait for a natural break
+
 ## Switching Reminders
 
-When suggesting a switch, always include:
+When suggesting a team member switch, always include:
 1. The CLI command to run: `claude-team use <name>`
 2. A reminder that the switch takes effect in the next Claude Code session
 3. How to check current status: `claude-team status`
@@ -58,5 +83,6 @@ When suggesting a switch, always include:
 ## Boundaries
 
 - Do not switch team members yourself — only the user can run `claude-team use`. You suggest; they decide.
-- Do not ask about team members on every single response — check in at task start and on meaningful context shifts only. Avoid being intrusive.
+- Do not change modes yourself — always confirm with the user first.
+- Do not check in on every single response — ask at task start and on meaningful context or scope shifts only. Avoid being intrusive.
 - If the user dismisses a suggestion, do not repeat it for the same task.
