@@ -1,0 +1,199 @@
+#!/usr/bin/env bash
+# claude-team — Manage Claude Code team member personas
+# https://gitlab.com/wcurran/claude-dev-team
+
+set -euo pipefail
+
+PROFILES_DIR="${CLAUDE_TEAM_PROFILES:-$HOME/.claude/team}"
+CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+MARKER_START="<!-- CLAUDE-TEAM:START -->"
+MARKER_END="<!-- CLAUDE-TEAM:END -->"
+
+# ─── Helpers ────────────────────────────────────────────────────────────────
+
+bold()  { printf '\033[1m%s\033[0m' "$*"; }
+green() { printf '\033[32m%s\033[0m' "$*"; }
+cyan()  { printf '\033[36m%s\033[0m' "$*"; }
+dim()   { printf '\033[2m%s\033[0m' "$*"; }
+red()   { printf '\033[31m%s\033[0m' "$*"; }
+
+die() { echo "$(red "error:") $*" >&2; exit 1; }
+
+require_profiles_dir() {
+  [[ -d "$PROFILES_DIR" ]] || die "Profiles directory not found: $PROFILES_DIR
+Run the installer first: bash install.sh"
+}
+
+resolve_name() {
+  local input="${1,,}"  # lowercase
+  local profile="$PROFILES_DIR/$input.md"
+  [[ -f "$profile" ]] || die "No profile found for '$input'. Run 'claude-team list' to see available team members."
+  echo "$profile"
+}
+
+get_active() {
+  [[ -f "$CLAUDE_MD" ]] || { echo ""; return; }
+  # Extract the name line from the active block
+  awk "/$MARKER_START/,/$MARKER_END/" "$CLAUDE_MD" \
+    | grep -m1 '^# ' \
+    | sed 's/^# //' \
+    | sed 's/ —.*//' \
+    || echo ""
+}
+
+# ─── Commands ────────────────────────────────────────────────────────────────
+
+cmd_list() {
+  require_profiles_dir
+  echo ""
+  echo "$(bold "Claude Dev Team") — available members"
+  echo ""
+
+  local active
+  active=$(get_active)
+
+  for profile in "$PROFILES_DIR"/*.md; do
+    [[ -f "$profile" ]] || continue
+    local name
+    name=$(basename "$profile" .md)
+    # Extract the title line (first # heading)
+    local title
+    title=$(grep -m1 '^# ' "$profile" | sed 's/^# //')
+    # Extract the role from the title (after " — ")
+    local role
+    role=$(echo "$title" | sed 's/.*— //')
+
+    if [[ "${name^}" == "$active"* ]] || [[ "$name" == "${active,,}" ]]; then
+      printf "  $(green "●") $(bold "%s") — %s $(dim "(active)")\n" "${name^}" "$role"
+    else
+      printf "  $(dim "○") $(bold "%s") — %s\n" "${name^}" "$role"
+    fi
+  done
+
+  echo ""
+  echo "$(dim "Run 'claude-team use <name>' to activate a team member.")"
+  echo ""
+}
+
+cmd_show() {
+  [[ $# -ge 1 ]] || die "Usage: claude-team show <name>"
+  local profile
+  profile=$(resolve_name "$1")
+  echo ""
+  cat "$profile"
+  echo ""
+}
+
+cmd_use() {
+  [[ $# -ge 1 ]] || die "Usage: claude-team use <name>"
+  local name="${1,,}"
+  local profile
+  profile=$(resolve_name "$name")
+
+  # Ensure CLAUDE.md exists
+  touch "$CLAUDE_MD"
+
+  local content
+  content=$(cat "$profile")
+
+  local block
+  block=$(printf '%s\n%s\n%s' "$MARKER_START" "$content" "$MARKER_END")
+
+  if grep -qF "$MARKER_START" "$CLAUDE_MD"; then
+    # Replace existing block using awk
+    local tmp
+    tmp=$(mktemp)
+    awk -v block="$block" \
+      "/$MARKER_START/{found=1; print block; next} found && /$MARKER_END/{found=0; next} !found{print}" \
+      "$CLAUDE_MD" > "$tmp"
+    mv "$tmp" "$CLAUDE_MD"
+  else
+    # Append block
+    printf '\n%s\n' "$block" >> "$CLAUDE_MD"
+  fi
+
+  local display_name
+  display_name=$(grep -m1 '^# ' "$profile" | sed 's/^# //' | sed 's/ —.*//')
+
+  echo ""
+  echo "$(green "✓") $(bold "$display_name") is now active."
+  echo "$(dim "Start a new Claude Code session to apply the profile.")"
+  echo ""
+}
+
+cmd_reset() {
+  if ! grep -qF "$MARKER_START" "$CLAUDE_MD" 2>/dev/null; then
+    echo ""
+    echo "$(dim "No team member is currently active.")"
+    echo ""
+    return
+  fi
+
+  local active
+  active=$(get_active)
+
+  local tmp
+  tmp=$(mktemp)
+  awk "/$MARKER_START/{found=1} found && /$MARKER_END/{found=0; next} !found{print}" \
+    "$CLAUDE_MD" > "$tmp"
+  # Remove trailing blank lines left by removed block
+  sed -e 's/[[:space:]]*$//' "$tmp" | \
+    awk 'NF{found=1} found' > "$CLAUDE_MD" || true
+  rm -f "$tmp"
+
+  echo ""
+  if [[ -n "$active" ]]; then
+    echo "$(green "✓") $(bold "$active") deactivated."
+  else
+    echo "$(green "✓") Team member deactivated."
+  fi
+  echo "$(dim "Start a new Claude Code session to apply.")"
+  echo ""
+}
+
+cmd_status() {
+  local active
+  active=$(get_active)
+
+  echo ""
+  if [[ -n "$active" ]]; then
+    echo "$(bold "Active team member:") $(green "$active")"
+  else
+    echo "$(dim "No team member is currently active.")"
+  fi
+  echo ""
+}
+
+cmd_help() {
+  echo ""
+  echo "$(bold "claude-team") — Manage Claude Code team member personas"
+  echo ""
+  echo "$(bold "Usage:")"
+  echo "  claude-team list              List all available team members"
+  echo "  claude-team show <name>       Display a team member's full profile"
+  echo "  claude-team use <name>        Activate a team member in Claude Code"
+  echo "  claude-team reset             Deactivate the current team member"
+  echo "  claude-team status            Show which team member is active"
+  echo ""
+  echo "$(bold "Examples:")"
+  echo "  claude-team use robin         Activate Robin (Testing)"
+  echo "  claude-team use akira         Activate Akira (Backend)"
+  echo "  claude-team use sasha         Activate Sasha (Frontend)"
+  echo "  claude-team reset             Return to default Claude behavior"
+  echo ""
+  echo "$(dim "Profiles are stored in: $PROFILES_DIR")"
+  echo "$(dim "Active profile is injected into: $CLAUDE_MD")"
+  echo ""
+}
+
+# ─── Dispatch ────────────────────────────────────────────────────────────────
+
+case "${1:-help}" in
+  list)   cmd_list ;;
+  show)   cmd_show "${2:-}" ;;
+  use)    cmd_use "${2:-}" ;;
+  reset)  cmd_reset ;;
+  status) cmd_status ;;
+  help|--help|-h) cmd_help ;;
+  *) die "Unknown command: $1. Run 'claude-team help' for usage." ;;
+esac
