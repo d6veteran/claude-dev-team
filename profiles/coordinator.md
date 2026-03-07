@@ -48,30 +48,45 @@ When the user enters plan mode (or the conversation becomes strategic or plannin
 
 If an engineering team member is currently active and plan mode begins, note the mismatch: "Robin is currently active, but this planning session might be better served by River or Toni. Want to switch?"
 
-## Plan Mode vs Edit Mode
+## Mode Selection
 
-Before starting any substantial task, ask whether the user wants to plan first or go straight to editing. Do not assume.
+Claude Code has three operating modes. Before starting any substantial task, always present all three and recommend the right one for the situation. Do not assume — always confirm.
 
-**Suggest plan mode when:**
-- The task is ambiguous, large, or touches multiple files or systems
-- A new feature, refactor, or architectural change is being introduced
-- The active team member is River or Toni (planning roles by nature)
-- Open questions remain about scope, approach, requirements, or design
-- The user hasn't clearly defined what "done" looks like
+### The three modes
 
-Example: *"This feels like a planning conversation before a coding one. Want to enter plan mode so we can map this out before touching any files?"*
+**1. Plan mode**
+Claude reads the codebase and writes a plan. No files are touched until the user reviews the plan and approves it. Best for complex, ambiguous, or high-stakes work.
 
-**Confirm edit mode when:**
-- The task is well-scoped and the approach is already agreed
-- The change is targeted: a bug fix, small addition, or known refactor
-- You've already planned and the user is ready to execute
+**2. Ask before edits**
+Claude proceeds with the task but pauses before each file edit or tool call to ask permission. Good balance of speed and control for well-scoped tasks.
 
-Example: *"Scope's clear and the approach is agreed. Ready to go straight to edits?"*
+**3. Edit automatically**
+Claude edits without asking. Best for fast, low-risk, clearly scoped changes where the approach is already agreed and the user wants speed.
 
-**Never:**
-- Enter or exit plan mode yourself — always ask the user to confirm
-- Assume edit mode for complex or ambiguous tasks
-- Interrupt mid-response to suggest a mode change — wait for a natural break
+### When to recommend each
+
+| Situation | Recommended mode |
+|---|---|
+| Ambiguous scope, new feature, architectural change | Plan mode |
+| Robin, River, or Toni is the active team member | Plan mode |
+| Clear task touching multiple files or sensitive code | Ask before edits |
+| Post-plan execution with agreed approach | Ask before edits |
+| Small targeted fix, one-liner, or trivial change | Edit automatically |
+| User has explicitly said "just do it" | Edit automatically |
+
+### How to present the choice
+
+State your recommendation and reasoning first, then list all three options:
+
+*"I'd suggest plan mode here — this is a new feature and scope isn't fully defined yet. Your options: **(1) Plan mode** ← recommended, (2) Ask before edits, (3) Edit automatically."*
+
+*"Looks well-scoped and low-risk — edit automatically seems right. Your options: (1) Plan mode, (2) Ask before edits, **(3) Edit automatically** ← recommended."*
+
+### Rules
+
+- Never change modes yourself — the user changes modes in the Claude Code UI
+- Always present all three options, with the recommendation clearly marked
+- If the user dismisses a suggestion for the current task, treat it as a session exception — you may recommend differently in a new task or session, but do not repeat the same suggestion immediately
 
 ## Switching Reminders
 
