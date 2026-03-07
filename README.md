@@ -30,9 +30,13 @@ And River takes over: asking what problem you're actually solving, who the user 
 
 You can switch mid-session. You can have Toni frame the messaging for a feature that Akira designed and Robin tested. They don't overlap — each stays in their lane and hands off cleanly.
 
+The team also keeps you honest about *how* you're working, not just *what* you're building. Before jumping into a complex task, they'll ask: *"Want to plan this first or go straight to edits?"* It's a small check-in that saves a lot of backtracking.
+
 ### The Coordinator
 
 Turn on the coordinator and Claude will ask you who should be on each task before diving in — and tap you on the shoulder when the work drifts into a different domain. It's like having a project manager who routes work to the right person automatically.
+
+It also suggests which Claude Code mode to use. Before starting anything substantial, it'll ask: *"Do you want to plan this out first, or should we go straight to editing?"* For complex tasks, it nudges you toward plan mode so nothing gets built without a shared understanding. For quick, well-scoped changes, it confirms you're ready to edit and goes.
 
 ---
 
@@ -128,13 +132,44 @@ River is structured, curious, and outcome-oriented. They think in problems befor
 
 ## Coordinator — Proactive Team Check-Ins
 
-The coordinator is an optional behavior layer that makes Claude actively manage team member selection for you.
+The coordinator is an optional behavior layer that makes Claude actively manage two things: **who's on the task** and **how you're working**.
 
-**When enabled, Claude will:**
-- Ask "which team member would you like on this task?" at the start of each session or new task
-- Suggest switching when the conversation shifts domain (e.g., backend discussion moving into UI work)
-- Prompt you when entering planning mode: "Should we bring in River or Toni for this?"
-- Never switch team members itself — it suggests, you decide
+### Team member check-ins
+
+At the start of each task, Claude identifies the best-fit team member based on what you're asking and confirms with you before proceeding:
+
+> *"This looks like an API design question — Akira would be the right lead. Want to activate Akira, or someone else?"*
+
+When the conversation shifts domain mid-session, Claude flags it and suggests a switch rather than quietly changing behavior:
+
+> *"We're moving into test strategy territory — want to bring Robin in? You can run `claude-team use robin` and start a fresh session."*
+
+### Plan mode vs edit mode suggestions
+
+Before starting anything substantial, the coordinator asks which Claude Code mode makes sense — rather than assuming and diving straight into edits.
+
+**It suggests plan mode when:**
+- The task is ambiguous, large, or touches multiple files
+- A new feature or architectural change is being introduced
+- The team member on deck is River or Toni (planning roles by nature)
+- There are open questions about scope, approach, or requirements
+
+> *"This feels like a planning conversation before a coding one. Want to enter plan mode so we can map this out before touching any files?"*
+
+**It confirms edit mode when:**
+- The task is well-scoped and the approach is clear
+- You're making a targeted fix or small addition
+- You've already planned and are ready to execute
+
+> *"Scope's clear and approach is agreed. Ready to go straight to edits?"*
+
+You always decide. The coordinator never changes modes itself — it asks, you confirm.
+
+### What the coordinator never does
+
+- Switch team members on its own
+- Enter or exit plan mode without your confirmation
+- Interrupt mid-response to suggest changes — it checks in at natural breaks
 
 Enable it during installation or at any time:
 
