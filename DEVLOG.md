@@ -5,6 +5,26 @@ Auto-maintained via Claude devlog skill. Entries are reverse-chronological.
 
 ---
 
+## [2026-03-08] Added bash test suite — 36 tests covering all CLI commands
+
+**Category:** `milestone`
+**Tags:** `testing`, `quality`, `v0.2`
+
+### Summary
+Added `tests/run.sh` — a self-contained 36-test bash suite covering all CLI commands. No external dependencies required.
+
+### Detail
+- 36 tests across: help, list, show (incl. case-insensitivity + error), use (injection, switching, idempotency), coordinator block survival across persona switches, reset, coordinator on/off (incl. idempotency), status, and error handling
+- Uses a temp `$HOME` (`mktemp -d`) and `CLAUDE_TEAM_PROFILES` env override to run in full isolation — never touches the real `~/.claude/CLAUDE.md`
+- Self-contained pure bash — no bats or other external test framework required; runs anywhere the CLI runs
+- Key bug caught during implementation: CLI's `touch "$CLAUDE_MD"` fails if `$HOME/.claude/` doesn't exist; fixed in test setup with `mkdir -p "$TEST_HOME/.claude"`
+- Decided against adding a `claude-team test` subcommand — single-dev personal tool, `bash tests/run.sh` is sufficient and keeps the CLI surface minimal
+
+### Related
+- Protects the awk block manipulation logic in `cmd_use`, `cmd_reset`, and `cmd_coordinator` — the highest-risk area of the codebase
+
+---
+
 ## [2026-03-08] v0.2 shipped — in-session persona switching via slash commands
 
 **Category:** `milestone`
