@@ -13,6 +13,8 @@ set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROFILES_SRC="$REPO_DIR/profiles"
 PROFILES_DST="$HOME/.claude/team"
+COMMANDS_SRC="$REPO_DIR/commands"
+COMMANDS_DST="$HOME/.claude/commands"
 BIN_SRC="$REPO_DIR/bin/claude-team"
 BIN_DST="$HOME/.local/bin/claude-team"
 
@@ -36,15 +38,25 @@ for f in "$PROFILES_DST"/*.md; do
 done
 echo ""
 
-# 2. Install CLI
-echo "Installing CLI to $BIN_DST ..."
-mkdir -p "$(dirname "$BIN_DST")"
-cp "$BIN_SRC" "$BIN_DST"
-chmod +x "$BIN_DST"
-echo "$(green "✓") CLI installed: $(dim "$BIN_DST")"
+# 2. Install slash commands
+echo "Installing slash commands to $COMMANDS_DST ..."
+mkdir -p "$COMMANDS_DST"
+cp "$COMMANDS_SRC"/*.md "$COMMANDS_DST/"
+echo "$(green "✓") Slash commands installed:"
+for f in "$COMMANDS_DST"/*.md; do
+  echo "    $(dim "$f")"
+done
 echo ""
 
-# 3. PATH check
+# 3. Install CLI (symlink so updates in the repo take effect immediately)
+echo "Installing CLI to $BIN_DST ..."
+mkdir -p "$(dirname "$BIN_DST")"
+ln -sf "$BIN_SRC" "$BIN_DST"
+chmod +x "$BIN_SRC"
+echo "$(green "✓") CLI symlinked: $(dim "$BIN_DST → $BIN_SRC")"
+echo ""
+
+# 4. PATH check
 if echo "$PATH" | grep -q "$HOME/.local/bin"; then
   echo "$(green "✓") ~/.local/bin is already on your PATH."
 else
@@ -59,7 +71,7 @@ else
   echo "    source ~/.zshrc   $(dim "# or ~/.bashrc")"
 fi
 
-# 4. Coordinator setup
+# 5. Coordinator setup
 echo ""
 echo "$(bold "Coordinator") — proactive team check-ins"
 echo ""
@@ -75,16 +87,16 @@ COORD_START="<!-- CLAUDE-COORDINATOR:START -->"
 COORD_END="<!-- CLAUDE-COORDINATOR:END -->"
 COORD_FILE="$PROFILES_DST/coordinator.md"
 
-if [[ "${coord_answer^^}" == "Y" ]]; then
+if [[ "$(echo "$coord_answer" | tr '[:lower:]' '[:upper:]')" == "Y" ]]; then
   touch "$CLAUDE_MD"
   content=$(cat "$COORD_FILE")
   block=$(printf '%s\n%s\n%s' "$COORD_START" "$content" "$COORD_END")
 
   if grep -qF "$COORD_START" "$CLAUDE_MD"; then
     tmp=$(mktemp)
-    awk -v block="$block" \
-      "/$COORD_START/{found=1; print block; next} found && /$COORD_END/{found=0; next} !found{print}" \
-      "$CLAUDE_MD" > "$tmp"
+    awk "/$COORD_START/{exit} {print}" "$CLAUDE_MD" > "$tmp"
+    printf '%s\n%s\n%s\n' "$COORD_START" "$content" "$COORD_END" >> "$tmp"
+    awk "/$COORD_END/{found=1; next} found{print}" "$CLAUDE_MD" >> "$tmp"
     mv "$tmp" "$CLAUDE_MD"
   else
     printf '\n%s\n' "$block" >> "$CLAUDE_MD"
@@ -107,5 +119,6 @@ echo "  claude-team use river              $(dim "# activate River (Product)")"
 echo "  claude-team coordinator on|off     $(dim "# toggle proactive check-ins")"
 echo "  claude-team reset                  $(dim "# return to default Claude")"
 echo ""
-echo "$(dim "Start a new Claude Code session after activating a team member.")"
+echo "Slash commands $(dim "(switch personas mid-session, no restart needed)"):"
+echo "  /robin   /akira   /sasha   /toni   /river   /team"
 echo ""

@@ -116,12 +116,12 @@ cmd_use() {
   block=$(printf '%s\n%s\n%s' "$MARKER_START" "$content" "$MARKER_END")
 
   if grep -qF "$MARKER_START" "$CLAUDE_MD"; then
-    # Replace existing block using awk
+    # Replace existing block by splitting around the markers
     local tmp
     tmp=$(mktemp)
-    awk -v block="$block" \
-      "/$MARKER_START/{found=1; print block; next} found && /$MARKER_END/{found=0; next} !found{print}" \
-      "$CLAUDE_MD" > "$tmp"
+    awk "/$MARKER_START/{exit} {print}" "$CLAUDE_MD" > "$tmp"
+    printf '%s\n%s\n%s\n' "$MARKER_START" "$content" "$MARKER_END" >> "$tmp"
+    awk "/$MARKER_END/{found=1; next} found{print}" "$CLAUDE_MD" >> "$tmp"
     mv "$tmp" "$CLAUDE_MD"
   else
     # Append block
@@ -207,12 +207,12 @@ Run the installer first: bash install.sh"
       block=$(printf '%s\n%s\n%s' "$COORD_START" "$content" "$COORD_END")
 
       if grep -qF "$COORD_START" "$CLAUDE_MD"; then
-        # Replace existing coordinator block
+        # Replace existing coordinator block by splitting around the markers
         local tmp
         tmp=$(mktemp)
-        awk -v block="$block" \
-          "/$COORD_START/{found=1; print block; next} found && /$COORD_END/{found=0; next} !found{print}" \
-          "$CLAUDE_MD" > "$tmp"
+        awk "/$COORD_START/{exit} {print}" "$CLAUDE_MD" > "$tmp"
+        printf '%s\n%s\n%s\n' "$COORD_START" "$content" "$COORD_END" >> "$tmp"
+        awk "/$COORD_END/{found=1; next} found{print}" "$CLAUDE_MD" >> "$tmp"
         mv "$tmp" "$CLAUDE_MD"
         echo ""
         echo "$(green "✓") Coordinator already on — profile refreshed."
@@ -254,6 +254,40 @@ Run the installer first: bash install.sh"
   esac
 }
 
+cmd_install_commands() {
+  local repo_dir
+  # Resolve the repo directory: script lives in bin/, so go one level up
+  repo_dir="$(cd "$(dirname "$(readlink "$0" 2>/dev/null || echo "$0")")/.." && pwd)"
+  local commands_src="$repo_dir/commands"
+  local commands_dst="$HOME/.claude/commands"
+
+  [[ -d "$commands_src" ]] || die "Commands directory not found: $commands_src
+Make sure you are running this from the claude-dev-team repo."
+
+  echo ""
+  echo "Installing slash commands to $commands_dst ..."
+  mkdir -p "$commands_dst"
+  cp "$commands_src"/*.md "$commands_dst/"
+  echo "$(green "✓") Slash commands installed:"
+  for f in "$commands_dst"/*.md; do
+    [[ -f "$f" ]] || continue
+    local name
+    name=$(basename "$f" .md)
+    echo "    $(dim "/")$(bold "$name")"
+  done
+  echo ""
+  echo "Use them in any Claude Code session:"
+  echo "  $(dim "/robin")   — switch to Robin (Testing)"
+  echo "  $(dim "/akira")   — switch to Akira (Backend)"
+  echo "  $(dim "/sasha")   — switch to Sasha (Frontend)"
+  echo "  $(dim "/toni")    — switch to Toni (Product Marketing)"
+  echo "  $(dim "/river")   — switch to River (Product)"
+  echo "  $(dim "/team")    — show current team status"
+  echo ""
+  echo "$(dim "No new session required — switches take effect immediately.")"
+  echo ""
+}
+
 cmd_help() {
   echo ""
   echo "$(bold "claude-team") — Manage Claude Code team member personas"
@@ -265,6 +299,7 @@ cmd_help() {
   echo "  claude-team reset                   Deactivate the current team member"
   echo "  claude-team status                  Show active team member and coordinator state"
   echo "  claude-team coordinator on|off      Enable/disable proactive team check-ins"
+  echo "  claude-team install-commands        Install slash commands to ~/.claude/commands/"
   echo ""
   echo "$(bold "Examples:")"
   echo "  claude-team use robin               Activate Robin (Testing)"
@@ -274,6 +309,7 @@ cmd_help() {
   echo "  claude-team use river               Activate River (Product)"
   echo "  claude-team coordinator on          Enable proactive team suggestions"
   echo "  claude-team reset                   Return to default Claude behavior"
+  echo "  claude-team install-commands        Install /robin, /akira, /sasha, /toni, /river, /team"
   echo ""
   echo "$(dim "Profiles are stored in: $PROFILES_DIR")"
   echo "$(dim "Active profile is injected into: $CLAUDE_MD")"
@@ -283,12 +319,13 @@ cmd_help() {
 # ─── Dispatch ────────────────────────────────────────────────────────────────
 
 case "${1:-help}" in
-  list)        cmd_list ;;
-  show)        cmd_show "${2:-}" ;;
-  use)         cmd_use "${2:-}" ;;
-  reset)       cmd_reset ;;
-  status)      cmd_status ;;
-  coordinator) cmd_coordinator "${2:-}" ;;
-  help|--help|-h) cmd_help ;;
+  list)             cmd_list ;;
+  show)             cmd_show "${2:-}" ;;
+  use)              cmd_use "${2:-}" ;;
+  reset)            cmd_reset ;;
+  status)           cmd_status ;;
+  coordinator)      cmd_coordinator "${2:-}" ;;
+  install-commands) cmd_install_commands ;;
+  help|--help|-h)   cmd_help ;;
   *) die "Unknown command: $1. Run 'claude-team help' for usage." ;;
 esac

@@ -318,32 +318,29 @@ claude-dev-team/
 
 ## Roadmap
 
-### Now — v0.1 (current)
+### v0.1
 
 - Five team member personas — Robin, Akira, Sasha, Toni, River
 - `claude-team` CLI — `use`, `list`, `show`, `reset`, `status`
 - Coordinator layer — proactive team member suggestions and three-mode recommendations
 - One-command installer with interactive coordinator prompt
 
-### Next — v0.2
+### v0.2 (current)
 
-**Slash command shortcuts**
+**In-session persona switching via slash commands**
 
-Single-command team member activation without leaving your session:
+Switch team members mid-session — no restart required. Each command injects the full persona into the conversation and updates the CLI state.
 
 | Command | Effect |
 |---|---|
-| `/robin` | Activate Robin (Testing) |
-| `/akira` | Activate Akira (Backend) |
-| `/sasha` | Activate Sasha (Frontend) |
-| `/toni` | Activate Toni (PMM), planning mode |
-| `/river` | Activate River (Product), planning mode |
-| `/robin-plan` | Activate Robin + recommend plan mode |
-| `/sasha-plan` | Activate Sasha + recommend plan mode |
+| `/robin` | Switch to Robin (QA & Testing) |
+| `/akira` | Switch to Akira (Backend Engineering) |
+| `/sasha` | Switch to Sasha (Frontend Engineering) |
+| `/toni` | Switch to Toni (Product Marketing) |
+| `/river` | Switch to River (Product Management) |
 | `/team` | Show current team status inline |
-| `/team-reset` | Deactivate current team member |
 
-Implemented as Claude Code slash commands in `.claude/commands/` — each invokes `claude-team use <name>` and frames the session with the right mode posture.
+Installed automatically by `bash install.sh` or via `claude-team install-commands` for existing installs. Commands are placed in `~/.claude/commands/` and are available in all Claude Code sessions.
 
 ### Later — v0.3+
 
